@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DayStatus {
+  OPEN
+  COMPLETED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  FINISHED
+}
+
+enum CycleStatus {
+  ACTIVE
+  CLOSED
+}
+
+model CompetitionCycle {
+  id        String      @id @default(cuid())
+  status    CycleStatus @default(ACTIVE)
+  createdAt DateTime    @default(now())
+  closedAt   DateTime?
+  matchDays  MatchDay[]
+}
+
+model User {
+  id         String         @id @default(cuid())
+  name       String         @unique
+  points     Int            @default(0)
+  createdAt  DateTime       @default(now())
+  bets       Bet[]
+  dailyWins  DailyWinner[]
+}
+
+model MatchDay {
+  id           String            @id @default(cuid())
+  cycleId      String
+  playDate     DateTime
+  status       DayStatus         @default(OPEN)
+  createdAt    DateTime          @default(now())
+  completedAt  DateTime?
+  cycle        CompetitionCycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  matches      Match[]
+  winners      DailyWinner[]
+
+  @@index([cycleId, playDate])
+  @@unique([cycleId, playDate])
+}
+
+model Match {
+  id               String      @id @default(cuid())
+  dayId            String
+  homeCountryCode  String
+  homeCountryName  String
+  homeFlagUrl      String
+  awayCountryCode  String
+  awayCountryName  String
+  awayFlagUrl      String
+  scheduledAt      DateTime?
+  homeScore        Int?
+  awayScore        Int?
+  status           MatchStatus @default(SCHEDULED)
+  createdAt        DateTime    @default(now())
+  day              MatchDay    @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  bets             Bet[]
+
+  @@index([dayId])
+}
+
+model Bet {
+  id                   String   @id @default(cuid())
+  userId               String
+  matchId              String
+  predictedHomeScore   Int
+  predictedAwayScore   Int
+  createdAt            DateTime @default(now())
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match                Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+model DailyWinner {
+  id         String   @id @default(cuid())
+  dayId      String
+  userId     String
+  exactHits  Int
+  createdAt  DateTime @default(now())
+  day        MatchDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([dayId, userId])
+}

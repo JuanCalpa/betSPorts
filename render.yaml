@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: betsports
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build --workspace frontend
+    startCommand: node backend/src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
