@@ -7,6 +7,7 @@ import {
   loadCountries,
   loadDashboard,
   loadHistory,
+  resetStore,
   restoreBackup,
   updateMatchResult,
 } from "../api";
@@ -190,6 +191,22 @@ export default function AdminPage() {
       await finalizeDay(selectedDay.id);
       setMessage("Jornada revisada.");
       await refreshDashboard(selectedDate);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function handleReset() {
+    if (!window.confirm("¿Seguro que quieres borrar TODOS los datos?\n\nSe eliminarán usuarios, partidos, apuestas y ganadores. Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("Segunda confirmación: ¿estás completamente seguro?")) return;
+
+    setError("");
+    setMessage("");
+
+    try {
+      await resetStore();
+      setMessage("Datos reiniciados correctamente.");
+      await refreshDashboard(todayValue());
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -549,6 +566,22 @@ export default function AdminPage() {
               </p>
             </div>
           )}
+        </section>
+
+        {/* Reiniciar datos */}
+        <section className="history-section glass-panel">
+          <div className="section-head">
+            <div>
+              <span className="section-label">Peligro</span>
+              <h2>Reiniciar todos los datos</h2>
+            </div>
+          </div>
+          <p className="muted" style={{ fontSize: "0.85rem", marginBottom: "1rem" }}>
+            Borra permanentemente todos los usuarios, partidos, apuestas y ganadores. Úsalo al inicio de un nuevo torneo.
+          </p>
+          <button type="button" className="ghost-button" style={{ borderColor: "#e53e3e", color: "#e53e3e" }} onClick={handleReset}>
+            Reiniciar todos los datos
+          </button>
         </section>
 
         <div style={{ textAlign: "center", padding: "1.5rem", opacity: 0.5, fontSize: "0.8rem" }}>

@@ -66,6 +66,10 @@ export function finalizeDay(dayId) {
   });
 }
 
+export function resetStore() {
+  return request("/reset", { method: "POST" });
+}
+
 export function loadBackups() {
   return request("/backups");
 }

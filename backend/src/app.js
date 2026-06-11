@@ -644,6 +644,16 @@ export function createApp() {
     }
   });
 
+  app.post("/api/reset", async (_request, response, next) => {
+    try {
+      const fresh = createInitialStore();
+      await writeStore(fresh);
+      response.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get("/api/backups", async (_request, response, next) => {
     try {
       const backupDir = join(__dirname, "..", "data", "backups");
