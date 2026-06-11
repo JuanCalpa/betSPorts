@@ -541,7 +541,12 @@ export function createApp() {
       }
 
       const existingBet = match.bets.find((bet) => bet.userId === user.id);
-      const betRecord = existingBet ?? {
+
+      if (existingBet) {
+        throw new Error("Ya registraste tu apuesta para este partido. No se permite cambiarla.");
+      }
+
+      const betRecord = {
         id: randomUUID(),
         userId: user.id,
         userName: user.name,
@@ -551,14 +556,7 @@ export function createApp() {
         updatedAt: nowIso(),
       };
 
-      betRecord.predictedHomeScore = payload.predictedHomeScore;
-      betRecord.predictedAwayScore = payload.predictedAwayScore;
-      betRecord.userName = user.name;
-      betRecord.updatedAt = nowIso();
-
-      if (!existingBet) {
-        match.bets.push(betRecord);
-      }
+      match.bets.push(betRecord);
 
       await writeStore(store);
       response.status(201).json({
