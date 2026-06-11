@@ -222,6 +222,30 @@ export default function App() {
                 </div>
               </div>
             </article>
+
+            <article className="glass-panel form-card">
+              <div className="section-head">
+                <div>
+                  <span className="section-label">Métodos de pago</span>
+                  <h2>¿Cómo pagar?</h2>
+                </div>
+              </div>
+              <div className="stack-form" style={{ alignItems: "center", textAlign: "center", gap: "0.75rem" }}>
+                <img
+                  src="/qr-pago.jpeg"
+                  alt="QR de pago Juan Calpa"
+                  style={{ width: "100%", maxWidth: "220px", borderRadius: "12px", boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}
+                />
+                <div>
+                  <strong style={{ display: "block", fontSize: "1rem" }}>Juan Calpa</strong>
+                  <span className="muted" style={{ fontSize: "0.85rem" }}>Llave · 310 398 0897</span>
+                </div>
+                <p style={{ fontSize: "0.85rem", lineHeight: "1.5", margin: 0 }}>
+                  Puedes pagar escaneando el código QR de Nequi / Bre-B,
+                  o en <strong>efectivo</strong> con cualquier compañero del equipo de Proyectos TI.
+                </p>
+              </div>
+            </article>
           </div>
 
           {/* Columna 2: Apuestas */}
