@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -602,6 +602,44 @@ export function createApp() {
         });
 
       response.json({ days: daysWithResults });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/backups", async (_request, response, next) => {
+    try {
+      const backupDir = join(__dirname, "..", "data", "backups");
+      await mkdir(backupDir, { recursive: true });
+      const files = await readdir(backupDir);
+      const backups = files
+        .filter((f) => /^store_\d{4}-\d{2}-\d{2}\.json$/.test(f))
+        .sort()
+        .reverse()
+        .map((f) => ({ filename: f, date: f.slice(6, 16) }));
+      response.json({ backups });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/backups/restore", async (request, response, next) => {
+    try {
+      const { filename } = z.object({
+        filename: z.string().regex(/^store_\d{4}-\d{2}-\d{2}\.json$/),
+      }).parse(request.body);
+
+      const backupDir = join(__dirname, "..", "data", "backups");
+      const backupContent = await readFile(join(backupDir, filename), "utf8");
+      JSON.parse(backupContent);
+
+      const now = new Date();
+      const tag = `${now.toISOString().slice(0, 10)}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      const currentContent = await readFile(storePath, "utf8");
+      await writeFile(join(backupDir, `store_previo_${tag}.json`), currentContent, "utf8");
+
+      await writeFile(storePath, backupContent, "utf8");
+      response.json({ ok: true, restored: filename });
     } catch (error) {
       next(error);
     }

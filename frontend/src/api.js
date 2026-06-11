@@ -65,3 +65,14 @@ export function finalizeDay(dayId) {
     method: "POST",
   });
 }
+
+export function loadBackups() {
+  return request("/backups");
+}
+
+export function restoreBackup(filename) {
+  return request("/backups/restore", {
+    method: "POST",
+    body: JSON.stringify({ filename }),
+  });
+}
