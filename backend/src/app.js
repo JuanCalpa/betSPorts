@@ -10,6 +10,10 @@ import { countryCatalog, countryCatalogByCode } from "./countries.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const storePath = join(__dirname, "..", "data", "store.json");
 
+const JSONBIN_KEY = process.env.JSONBIN_MASTER_KEY;
+const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
+const useJsonBin = !!(JSONBIN_KEY && JSONBIN_BIN_ID);
+
 const createDaySchema = z.object({
   playDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   matches: z.array(
@@ -62,16 +66,25 @@ async function ensureStore() {
 }
 
 async function readStore() {
-  await ensureStore();
-  const content = await readFile(storePath, "utf8");
   let parsed;
 
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    parsed = createInitialStore();
-    await writeStore(parsed);
-    return parsed;
+  if (useJsonBin) {
+    const response = await fetch(
+      `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`,
+      { headers: { "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" } },
+    );
+    if (!response.ok) throw new Error(`JSONBin read error: ${response.status}`);
+    parsed = await response.json();
+  } else {
+    await ensureStore();
+    const content = await readFile(storePath, "utf8");
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = createInitialStore();
+      await writeStore(parsed);
+      return parsed;
+    }
   }
 
   if (!parsed.activeCycle?.id) {
@@ -102,7 +115,19 @@ async function readStore() {
 }
 
 async function writeStore(store) {
-  await writeFile(storePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  if (useJsonBin) {
+    const response = await fetch(
+      `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY },
+        body: JSON.stringify(store),
+      },
+    );
+    if (!response.ok) throw new Error(`JSONBin write error: ${response.status}`);
+  } else {
+    await writeFile(storePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  }
 }
 
 function normalizeDateOnly(dateValue) {
@@ -631,14 +656,14 @@ export function createApp() {
 
       const backupDir = join(__dirname, "..", "data", "backups");
       const backupContent = await readFile(join(backupDir, filename), "utf8");
-      JSON.parse(backupContent);
+      const backupData = JSON.parse(backupContent);
 
       const now = new Date();
       const tag = `${now.toISOString().slice(0, 10)}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
-      const currentContent = await readFile(storePath, "utf8");
-      await writeFile(join(backupDir, `store_previo_${tag}.json`), currentContent, "utf8");
+      const currentStore = await readStore();
+      await writeFile(join(backupDir, `store_previo_${tag}.json`), JSON.stringify(currentStore, null, 2), "utf8");
 
-      await writeFile(storePath, backupContent, "utf8");
+      await writeStore(backupData);
       response.json({ ok: true, restored: filename });
     } catch (error) {
       next(error);
