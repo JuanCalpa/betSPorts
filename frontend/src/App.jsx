@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { createBet, createUser, loadCountries, loadDashboard } from "./api";
+import { createBet, createUser, loadCountries, loadDashboard, loadHistory } from "./api";
 
 function todayValue() {
   return new Date().toISOString().slice(0, 10);
@@ -25,6 +25,11 @@ function formatDateTime(value) {
   return new Date(value).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
 }
 
+function formatDate(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("es-ES", { dateStyle: "long" });
+}
+
 export default function App() {
   const initialDate = todayValue();
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -36,14 +41,16 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [predictionForms, setPredictionForms] = useState({});
+  const [history, setHistory] = useState([]);
 
   async function refreshDashboard(date = selectedDate) {
     setLoading(true);
     setError("");
 
     try {
-      const dashPayload = await loadDashboard(date);
+      const [dashPayload, histPayload] = await Promise.all([loadDashboard(date), loadHistory()]);
       setDashboard(dashPayload);
+      setHistory(histPayload.days ?? []);
       setSelectedDate(date);
       setSelectedUserId((current) => current || dashPayload.users?.[0]?.id || "");
 
@@ -374,6 +381,72 @@ export default function App() {
             </article>
           </div>
 
+        </section>
+
+        {/* Historial de partidos finalizados */}
+        <section className="history-section glass-panel">
+          <div className="section-head">
+            <div>
+              <span className="section-label">Historial</span>
+              <h2>Partidos finalizados</h2>
+            </div>
+          </div>
+
+          {history.length === 0 ? (
+            <div className="empty-state">No hay partidos finalizados todavía.</div>
+          ) : (
+            <div className="history-days">
+              {history.map((day) => (
+                <div className="history-day" key={day.id}>
+                  <div className="history-day-header">
+                    <span className="history-date">{formatDate(day.playDate)}</span>
+                    {day.winners.length > 0 && (
+                      <div className="history-winners-list">
+                        {day.winners.map((w) => (
+                          <span className="winner-badge" key={w.id}>
+                            Ganador: {w.userName} — {w.exactHits}/{w.totalMatches} aciertos
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="history-matches">
+                    {day.matches.map((match) => (
+                      <div className="history-match" key={match.id}>
+                        <div className="match-line">
+                          <div className="country-line">
+                            <img src={match.homeFlagUrl} alt={match.homeCountryName} />
+                            <span>{match.homeCountryName}</span>
+                          </div>
+                          <span className="history-score">{match.homeScore} - {match.awayScore}</span>
+                          <div className="country-line right">
+                            <span>{match.awayCountryName}</span>
+                            <img src={match.awayFlagUrl} alt={match.awayCountryName} />
+                          </div>
+                        </div>
+                        <div className="bets-strip">
+                          {match.bets.length ? (
+                            match.bets.map((bet) => {
+                              const isHit =
+                                bet.predictedHomeScore === match.homeScore &&
+                                bet.predictedAwayScore === match.awayScore;
+                              return (
+                                <span key={bet.id} className={`bet-chip ${isHit ? "bet-hit" : "bet-miss"}`}>
+                                  {bet.userName} {bet.predictedHomeScore}-{bet.predictedAwayScore}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="muted">Sin apuestas registradas</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <div style={{ textAlign: "center", padding: "1.5rem", opacity: 0.5, fontSize: "0.8rem" }}>
