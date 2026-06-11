@@ -14,6 +14,8 @@ const JSONBIN_KEY = process.env.JSONBIN_MASTER_KEY;
 const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
 const useJsonBin = !!(JSONBIN_KEY && JSONBIN_BIN_ID);
 
+let storeCache = null;
+
 const createDaySchema = z.object({
   playDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   matches: z.array(
@@ -66,6 +68,8 @@ async function ensureStore() {
 }
 
 async function readStore() {
+  if (storeCache) return storeCache;
+
   let parsed;
 
   if (useJsonBin) {
@@ -74,7 +78,11 @@ async function readStore() {
       { headers: { "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" } },
     );
     if (!response.ok) throw new Error(`JSONBin read error: ${response.status}`);
-    parsed = await response.json();
+    try {
+      parsed = await response.json();
+    } catch {
+      throw new Error("JSONBin devolvió una respuesta inválida. Verifica el BIN_ID y la Master Key.");
+    }
   } else {
     await ensureStore();
     const content = await readFile(storePath, "utf8");
@@ -82,8 +90,9 @@ async function readStore() {
       parsed = JSON.parse(content);
     } catch {
       parsed = createInitialStore();
+      storeCache = parsed;
       await writeStore(parsed);
-      return parsed;
+      return storeCache;
     }
   }
 
@@ -107,14 +116,19 @@ async function readStore() {
       }
     }
   }
+
+  storeCache = parsed;
+
   if (backfilled) {
     await writeStore(parsed);
   }
 
-  return parsed;
+  return storeCache;
 }
 
 async function writeStore(store) {
+  storeCache = store;
+
   if (useJsonBin) {
     const response = await fetch(
       `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`,
