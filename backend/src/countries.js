@@ -46,7 +46,7 @@ const countryList = [
   ["SA", "Arabia Saudí"],
   ["AU", "Australia"],
   ["KR", "Corea del Sur"],
-  ["IQ", "Irak"],
+  ["IQ", "Iraq"],
   ["IR", "Irán"],
   ["JP", "Japón"],
   ["JO", "Jordania"],
