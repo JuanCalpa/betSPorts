@@ -574,6 +574,41 @@ export function createApp() {
     }
   });
 
+  app.delete("/api/bets/:betId", async (request, response, next) => {
+    try {
+      const { betId } = request.params;
+      const store = await readStore();
+
+      let found = false;
+      let matchWasFinished = false;
+
+      outer: for (const day of store.days) {
+        for (const match of day.matches) {
+          const betIndex = match.bets.findIndex((bet) => bet.id === betId);
+          if (betIndex !== -1) {
+            match.bets.splice(betIndex, 1);
+            found = true;
+            matchWasFinished = match.status === "FINISHED";
+            break outer;
+          }
+        }
+      }
+
+      if (!found) {
+        throw new Error("La apuesta no existe.");
+      }
+
+      if (matchWasFinished) {
+        recalculatePoints(store, store.activeCycle.id);
+      }
+
+      await writeStore(store);
+      response.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.put("/api/matches/:matchId/result", async (request, response, next) => {
     try {
       const payload = updateResultSchema.parse(request.body);

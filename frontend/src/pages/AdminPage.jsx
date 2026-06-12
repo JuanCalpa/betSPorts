@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   createDay,
+  deleteBet,
   finalizeDay,
   loadBackups,
   loadCountries,
@@ -207,6 +208,20 @@ export default function AdminPage() {
       await resetStore();
       setMessage("Datos reiniciados correctamente.");
       await refreshDashboard(todayValue());
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function handleDeleteBet(betId, userName) {
+    if (!window.confirm(`¿Eliminar la apuesta de ${userName}? Esta acción no se puede deshacer.`)) return;
+    setError("");
+    setMessage("");
+
+    try {
+      await deleteBet(betId);
+      setMessage(`Apuesta de ${userName} eliminada.`);
+      await refreshDashboard(selectedDate);
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -438,6 +453,14 @@ export default function AdminPage() {
                             match.bets.map((bet) => (
                               <span className="bet-chip" key={bet.id}>
                                 {bet.userName} {bet.predictedHomeScore}-{bet.predictedAwayScore}
+                                <button
+                                  type="button"
+                                  className="bet-delete-btn"
+                                  title="Eliminar apuesta"
+                                  onClick={() => handleDeleteBet(bet.id, bet.userName)}
+                                >
+                                  ×
+                                </button>
                               </span>
                             ))
                           ) : (
@@ -510,6 +533,14 @@ export default function AdminPage() {
                               return (
                                 <span key={bet.id} className={`bet-chip ${isHit ? "bet-hit" : "bet-miss"}`}>
                                   {bet.userName} {bet.predictedHomeScore}-{bet.predictedAwayScore}
+                                  <button
+                                    type="button"
+                                    className="bet-delete-btn"
+                                    title="Eliminar apuesta"
+                                    onClick={() => handleDeleteBet(bet.id, bet.userName)}
+                                  >
+                                    ×
+                                  </button>
                                 </span>
                               );
                             })

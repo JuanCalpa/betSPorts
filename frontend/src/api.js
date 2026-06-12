@@ -53,6 +53,10 @@ export function createBet(payload) {
   });
 }
 
+export function deleteBet(betId) {
+  return request(`/bets/${betId}`, { method: "DELETE" });
+}
+
 export function updateMatchResult(matchId, payload) {
   return request(`/matches/${matchId}/result`, {
     method: "PUT",
