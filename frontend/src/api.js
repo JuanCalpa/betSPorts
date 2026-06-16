@@ -39,6 +39,10 @@ export function createUser(name) {
   });
 }
 
+export function deleteUser(userId) {
+  return request(`/users/${userId}`, { method: "DELETE" });
+}
+
 export function createDay(payload) {
   return request(`/days`, {
     method: "POST",

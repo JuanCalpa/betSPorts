@@ -515,6 +515,33 @@ export function createApp() {
     }
   });
 
+  app.delete("/api/users/:userId", async (request, response, next) => {
+    try {
+      const { userId } = request.params;
+      const store = await readStore();
+
+      const userIndex = store.users.findIndex((user) => user.id === userId);
+      if (userIndex === -1) {
+        throw new Error("El compañero no existe.");
+      }
+
+      store.users.splice(userIndex, 1);
+
+      for (const day of store.days) {
+        for (const match of day.matches) {
+          match.bets = match.bets.filter((bet) => bet.userId !== userId);
+        }
+      }
+
+      recalculatePoints(store, store.activeCycle.id);
+
+      await writeStore(store);
+      response.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post("/api/bets", async (request, response, next) => {
     try {
       const payload = createBetSchema.parse(request.body);

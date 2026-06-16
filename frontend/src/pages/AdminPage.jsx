@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   createDay,
   deleteBet,
+  deleteUser,
   finalizeDay,
   loadBackups,
   loadCountries,
@@ -117,6 +118,7 @@ export default function AdminPage() {
 
   const selectedDay = dashboard?.day ?? null;
   const countryOptions = countries.length > 0 ? countries : dashboard?.countries ?? [];
+  const users = dashboard?.users ?? [];
   const matches = selectedDay?.matches ?? [];
   const pendingMatches = matches.filter((match) => match.status !== "FINISHED");
   const cycleStatus = dashboard?.cycle?.status ?? "ACTIVE";
@@ -221,6 +223,20 @@ export default function AdminPage() {
     try {
       await deleteBet(betId);
       setMessage(`Apuesta de ${userName} eliminada.`);
+      await refreshDashboard(selectedDate);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function handleDeleteUser(userId, userName) {
+    if (!window.confirm(`¿Eliminar a ${userName}? También se borrarán sus apuestas. Esta acción no se puede deshacer.`)) return;
+    setError("");
+    setMessage("");
+
+    try {
+      await deleteUser(userId);
+      setMessage(`Compañero ${userName} eliminado.`);
       await refreshDashboard(selectedDate);
     } catch (requestError) {
       setError(requestError.message);
@@ -551,6 +567,39 @@ export default function AdminPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Compañeros */}
+        <section className="history-section glass-panel">
+          <div className="section-head">
+            <div>
+              <span className="section-label">Compañeros</span>
+              <h2>Gestionar usuarios</h2>
+            </div>
+          </div>
+
+          {users.length === 0 ? (
+            <div className="empty-state">No hay compañeros registrados todavía.</div>
+          ) : (
+            <div className="leaderboard-list">
+              {users.map((user) => (
+                <div className="leaderboard-row" key={user.id}>
+                  <div>
+                    <strong>{user.name}</strong>
+                    <span> — {user.points} puntos</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="bet-delete-btn"
+                    title="Eliminar compañero"
+                    onClick={() => handleDeleteUser(user.id, user.name)}
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
