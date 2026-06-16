@@ -52,7 +52,6 @@ export default function App() {
       setDashboard(dashPayload);
       setHistory(histPayload.days ?? []);
       setSelectedDate(date);
-      setSelectedUserId((current) => current || dashPayload.users?.[0]?.id || "");
 
       setPredictionForms((current) => {
         const next = { ...current };
