@@ -304,8 +304,9 @@ function findWinningDay(store, cycleId) {
     }
 
     const exactHitsByUser = countExactHitsForDay(day);
+    const hitsToWin = Math.min(2, day.matches.length);
     const winners = [...exactHitsByUser.entries()]
-      .filter(([, exactHits]) => exactHits === day.matches.length)
+      .filter(([, exactHits]) => exactHits >= hitsToWin)
       .map(([userId, exactHits]) => ({ userId, exactHits }));
 
     if (winners.length > 0) {
