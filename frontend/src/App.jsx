@@ -3,7 +3,11 @@ import { Link } from "react-router-dom";
 import { createBet, createUser, loadCountries, loadDashboard, loadHistory } from "./api";
 
 function todayValue() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function emptyPredictionForm() {
@@ -27,7 +31,8 @@ function formatDateTime(value) {
 
 function formatDate(value) {
   if (!value) return "";
-  return new Date(value).toLocaleDateString("es-ES", { dateStyle: "long" });
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("es-ES", { dateStyle: "long" });
 }
 
 export default function App() {
@@ -390,7 +395,7 @@ export default function App() {
                       winners.map((winner) => (
                         <div className="winner-row" key={winner.id}>
                           <strong>{winner.userName}</strong>
-                          <span>{new Date(winner.playDate).toLocaleDateString("es-ES")}</span>
+                          <span>{formatDate(winner.playDate)}</span>
                           <small>{winner.exactHits}/{winner.totalMatches} aciertos</small>
                         </div>
                       ))

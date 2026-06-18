@@ -15,7 +15,11 @@ import {
 } from "../api";
 
 function todayValue() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function emptyMatchForm(date = todayValue()) {
@@ -45,7 +49,8 @@ function formatDateTime(value) {
 
 function formatDate(value) {
   if (!value) return "";
-  return new Date(value).toLocaleDateString("es-ES", { dateStyle: "long" });
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("es-ES", { dateStyle: "long" });
 }
 
 export default function AdminPage() {
@@ -149,7 +154,7 @@ export default function AdminPage() {
           {
             homeCountryCode: matchForm.homeCountryCode,
             awayCountryCode: matchForm.awayCountryCode,
-            scheduledAt: matchForm.scheduledAt,
+            scheduledAt: matchForm.scheduledAt ? new Date(matchForm.scheduledAt).toISOString() : "",
           },
         ],
       });
