@@ -68,6 +68,10 @@ export function updateMatchResult(matchId, payload) {
   });
 }
 
+export function deleteMatch(matchId) {
+  return request(`/matches/${matchId}`, { method: "DELETE" });
+}
+
 export function finalizeDay(dayId) {
   return request(`/days/${dayId}/finalize`, {
     method: "POST",

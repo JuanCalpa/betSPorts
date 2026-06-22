@@ -669,6 +669,31 @@ export function createApp() {
     }
   });
 
+  app.delete("/api/matches/:matchId", async (request, response, next) => {
+    try {
+      const { matchId } = request.params;
+      const store = await readStore();
+      const day = store.days.find((entry) => entry.matches.some((match) => match.id === matchId));
+      const matchIndex = day?.matches.findIndex((match) => match.id === matchId);
+
+      if (!day || matchIndex === undefined || matchIndex === -1) {
+        throw new Error("El partido no existe.");
+      }
+
+      const wasFinished = day.matches[matchIndex].status === "FINISHED";
+      day.matches.splice(matchIndex, 1);
+
+      if (wasFinished) {
+        recalculatePoints(store, store.activeCycle.id);
+      }
+
+      await writeStore(store);
+      response.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post("/api/days/:dayId/finalize", async (request, response, next) => {
     try {
       const store = await readStore();

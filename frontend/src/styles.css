@@ -540,6 +540,36 @@ button:focus-visible {
   background: rgba(229, 62, 62, 0.45);
 }
 
+.match-teams {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.match-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(229, 62, 62, 0.2);
+  color: #e53e3e;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.match-delete-btn:hover {
+  background: rgba(229, 62, 62, 0.45);
+}
+
 .empty-state {
   padding: 18px;
   border-radius: 16px;

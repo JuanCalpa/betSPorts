@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   createDay,
   deleteBet,
+  deleteMatch,
   deleteUser,
   finalizeDay,
   loadBackups,
@@ -234,6 +235,20 @@ export default function AdminPage() {
     }
   }
 
+  async function handleDeleteMatch(matchId, homeCountryName, awayCountryName) {
+    if (!window.confirm(`¿Eliminar el partido ${homeCountryName} vs ${awayCountryName}? También se borrarán sus apuestas. Esta acción no se puede deshacer.`)) return;
+    setError("");
+    setMessage("");
+
+    try {
+      await deleteMatch(matchId);
+      setMessage(`Partido ${homeCountryName} vs ${awayCountryName} eliminado.`);
+      await refreshDashboard(selectedDate);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
   async function handleDeleteUser(userId, userName) {
     if (!window.confirm(`¿Eliminar a ${userName}? También se borrarán sus apuestas. Esta acción no se puede deshacer.`)) return;
     setError("");
@@ -412,15 +427,25 @@ export default function AdminPage() {
                     return (
                       <article className="result-card match-card" key={match.id}>
                         <div className="match-line">
-                          <div className="country-line">
-                            <img src={match.homeFlagUrl} alt={match.homeCountryName} />
-                            <span>{match.homeCountryName}</span>
+                          <div className="match-teams">
+                            <div className="country-line">
+                              <img src={match.homeFlagUrl} alt={match.homeCountryName} />
+                              <span>{match.homeCountryName}</span>
+                            </div>
+                            <span className="versus">vs</span>
+                            <div className="country-line right">
+                              <span>{match.awayCountryName}</span>
+                              <img src={match.awayFlagUrl} alt={match.awayCountryName} />
+                            </div>
                           </div>
-                          <span className="versus">vs</span>
-                          <div className="country-line right">
-                            <span>{match.awayCountryName}</span>
-                            <img src={match.awayFlagUrl} alt={match.awayCountryName} />
-                          </div>
+                          <button
+                            type="button"
+                            className="match-delete-btn"
+                            title="Eliminar partido"
+                            onClick={() => handleDeleteMatch(match.id, match.homeCountryName, match.awayCountryName)}
+                          >
+                            ×
+                          </button>
                         </div>
 
                         <div className="match-meta">
