@@ -77,7 +77,12 @@ async function readStore() {
       `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`,
       { headers: { "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" } },
     );
-    if (!response.ok) throw new Error(`JSONBin read error: ${response.status}`);
+    if (!response.ok) {
+      const detail = response.status === 403
+        ? "Clave inválida o sin permisos (403). Verifica JSONBIN_MASTER_KEY y JSONBIN_BIN_ID en las variables de entorno."
+        : `código ${response.status}`;
+      throw new Error(`Error al leer de JSONBin: ${detail}`);
+    }
     try {
       parsed = await response.json();
     } catch {
@@ -127,8 +132,6 @@ async function readStore() {
 }
 
 async function writeStore(store) {
-  storeCache = store;
-
   if (useJsonBin) {
     const response = await fetch(
       `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`,
@@ -138,10 +141,20 @@ async function writeStore(store) {
         body: JSON.stringify(store),
       },
     );
-    if (!response.ok) throw new Error(`JSONBin write error: ${response.status}`);
+    if (!response.ok) {
+      // Limpiar el caché para que el próximo request lea JSONBin y no quede
+      // el caché en memoria desincronizado con el store persistido.
+      storeCache = null;
+      const detail = response.status === 403
+        ? "Clave inválida o sin permisos (403). Verifica JSONBIN_MASTER_KEY y JSONBIN_BIN_ID en las variables de entorno."
+        : `código ${response.status}`;
+      throw new Error(`Error al guardar en JSONBin: ${detail}`);
+    }
   } else {
     await writeFile(storePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
   }
+  // Solo actualizar el caché después de confirmar que el write fue exitoso.
+  storeCache = store;
 }
 
 function normalizeDateOnly(dateValue) {
@@ -357,7 +370,7 @@ function closeCycleAndReset(store, cycleId, winningDay) {
   return winningDay;
 }
 
-async function refreshStoreState(store) {
+async function refreshStoreState(store, { allowCycleClose = false } = {}) {
   let changed = false;
 
   if (store.activeCycle?.status !== "ACTIVE") {
@@ -373,7 +386,9 @@ async function refreshStoreState(store) {
   recalculatePoints(store, store.activeCycle.id);
   markCompletedDays(store, store.activeCycle.id);
 
-  const winningDay = findWinningDay(store, store.activeCycle.id);
+  // Solo cerrar el ciclo cuando el admin finaliza la jornada explícitamente,
+  // no al ingresar resultados, para evitar que el día activo "desaparezca".
+  const winningDay = allowCycleClose ? findWinningDay(store, store.activeCycle.id) : null;
   if (winningDay) {
     closeCycleAndReset(store, store.activeCycle.id, winningDay);
     changed = true;
@@ -703,7 +718,7 @@ export function createApp() {
         throw new Error("La jornada no existe.");
       }
 
-      const state = await refreshStoreState(store);
+      const state = await refreshStoreState(store, { allowCycleClose: true });
       await writeStore(store);
 
       response.json({ ok: true, nextCycleId: state.activeCycle.id });
