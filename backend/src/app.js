@@ -14,6 +14,10 @@ const JSONBIN_KEY = process.env.JSONBIN_MASTER_KEY;
 const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
 const useJsonBin = !!(JSONBIN_KEY && JSONBIN_BIN_ID);
 
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_GIST_ID = process.env.GITHUB_GIST_ID;
+const useGithubGist = !!(GITHUB_TOKEN && GITHUB_GIST_ID);
+
 let storeCache = null;
 
 const createDaySchema = z.object({
@@ -252,6 +256,22 @@ function serializeCycle(cycle) {
     createdAt: cycle.createdAt,
     closedAt: cycle.closedAt,
   };
+}
+
+function pruneOldBets(store) {
+  let removed = 0;
+  for (const day of store.days) {
+    if (day.cycleId === store.activeCycle.id) continue; // no tocar el ciclo activo
+    for (const match of day.matches) {
+      if (match.status !== "FINISHED") continue;
+      const before = match.bets.length;
+      match.bets = match.bets.filter(
+        (bet) => bet.predictedHomeScore === match.homeScore && bet.predictedAwayScore === match.awayScore,
+      );
+      removed += before - match.bets.length;
+    }
+  }
+  return removed;
 }
 
 function recalculatePoints(store, cycleId) {
@@ -779,6 +799,17 @@ export function createApp() {
         });
 
       response.json({ days: daysWithResults });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/prune", async (_request, response, next) => {
+    try {
+      const store = await readStore();
+      const removed = pruneOldBets(store);
+      await writeStore(store);
+      response.json({ ok: true, removed });
     } catch (error) {
       next(error);
     }

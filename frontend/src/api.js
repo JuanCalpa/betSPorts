@@ -82,6 +82,10 @@ export function resetStore() {
   return request("/reset", { method: "POST" });
 }
 
+export function pruneOldBets() {
+  return request("/prune", { method: "POST" });
+}
+
 export function loadBackups() {
   return request("/backups");
 }

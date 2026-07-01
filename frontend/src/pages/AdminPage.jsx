@@ -10,6 +10,7 @@ import {
   loadCountries,
   loadDashboard,
   loadHistory,
+  pruneOldBets,
   resetStore,
   restoreBackup,
   updateMatchResult,
@@ -200,6 +201,19 @@ export default function AdminPage() {
       await finalizeDay(selectedDay.id);
       setMessage("Jornada revisada.");
       await refreshDashboard(selectedDate);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function handlePruneOldBets() {
+    if (!window.confirm("¿Eliminar apuestas fallidas de jornadas pasadas?\n\nSolo se conservarán los aciertos exactos. Los partidos y sus resultados oficiales no se tocan.")) return;
+    setError("");
+    setMessage("");
+
+    try {
+      const result = await pruneOldBets();
+      setMessage(`Limpieza completada: ${result.removed} apuestas fallidas eliminadas de jornadas anteriores.`);
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -676,6 +690,22 @@ export default function AdminPage() {
               </p>
             </div>
           )}
+        </section>
+
+        {/* Limpiar apuestas fallidas */}
+        <section className="history-section glass-panel">
+          <div className="section-head">
+            <div>
+              <span className="section-label">Mantenimiento</span>
+              <h2>Limpiar apuestas fallidas antiguas</h2>
+            </div>
+          </div>
+          <p className="muted" style={{ fontSize: "0.85rem", marginBottom: "1rem" }}>
+            Elimina las apuestas que no acertaron el marcador exacto en jornadas de ciclos anteriores. Los partidos, sus resultados oficiales y los aciertos exactos se conservan. Útil para reducir el tamaño del almacenamiento.
+          </p>
+          <button type="button" className="ghost-button" onClick={handlePruneOldBets}>
+            Limpiar apuestas fallidas
+          </button>
         </section>
 
         {/* Reiniciar datos */}
