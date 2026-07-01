@@ -78,9 +78,11 @@ async function readStore() {
       { headers: { "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" } },
     );
     if (!response.ok) {
+      let body = "";
+      try { body = await response.text(); } catch { /* ignore */ }
       const detail = response.status === 403
-        ? "Clave inválida o sin permisos (403). Verifica JSONBIN_MASTER_KEY y JSONBIN_BIN_ID en las variables de entorno."
-        : `código ${response.status}`;
+        ? `Clave inválida o sin permisos (403). JSONBin dice: "${body}". Verifica que JSONBIN_MASTER_KEY pertenezca a la misma cuenta que creó el bin JSONBIN_BIN_ID.`
+        : `código ${response.status}: ${body}`;
       throw new Error(`Error al leer de JSONBin: ${detail}`);
     }
     try {
@@ -145,9 +147,11 @@ async function writeStore(store) {
       // Limpiar el caché para que el próximo request lea JSONBin y no quede
       // el caché en memoria desincronizado con el store persistido.
       storeCache = null;
+      let body = "";
+      try { body = await response.text(); } catch { /* ignore */ }
       const detail = response.status === 403
-        ? "Clave inválida o sin permisos (403). Verifica JSONBIN_MASTER_KEY y JSONBIN_BIN_ID en las variables de entorno."
-        : `código ${response.status}`;
+        ? `Clave inválida o sin permisos (403). JSONBin dice: "${body}". Verifica que JSONBIN_MASTER_KEY pertenezca a la misma cuenta que creó el bin JSONBIN_BIN_ID.`
+        : `código ${response.status}: ${body}`;
       throw new Error(`Error al guardar en JSONBin: ${detail}`);
     }
   } else {
@@ -409,6 +413,39 @@ export function createApp() {
 
   app.get("/api/health", (_request, response) => {
     response.json({ ok: true });
+  });
+
+  app.get("/api/health/jsonbin", async (_request, response) => {
+    if (!useJsonBin) {
+      response.json({ mode: "local-file", ok: true });
+      return;
+    }
+
+    const keyPrefix = JSONBIN_KEY ? `${JSONBIN_KEY.slice(0, 6)}…` : "(no configurada)";
+    let readOk = false;
+    let readStatus = null;
+    let readBody = "";
+
+    try {
+      const res = await fetch(
+        `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`,
+        { headers: { "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" } },
+      );
+      readStatus = res.status;
+      readBody = await res.text();
+      readOk = res.ok;
+    } catch (err) {
+      readBody = err.message;
+    }
+
+    response.json({
+      mode: "jsonbin",
+      binId: JSONBIN_BIN_ID ?? "(no configurado)",
+      keyPrefix,
+      readOk,
+      readStatus,
+      readBody: readBody.slice(0, 300),
+    });
   });
 
   app.get("/api/countries", (_request, response) => {
