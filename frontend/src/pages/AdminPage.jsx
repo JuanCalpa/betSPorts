@@ -69,6 +69,7 @@ export default function AdminPage() {
   const [backups, setBackups] = useState([]);
   const [selectedBackup, setSelectedBackup] = useState("");
   const [restoring, setRestoring] = useState(false);
+  const [editingResultId, setEditingResultId] = useState(null);
 
   async function refreshDashboard(date = selectedDate) {
     setLoading(true);
@@ -128,6 +129,7 @@ export default function AdminPage() {
   const users = dashboard?.users ?? [];
   const matches = selectedDay?.matches ?? [];
   const pendingMatches = matches.filter((match) => match.status !== "FINISHED");
+  const finishedMatches = matches.filter((match) => match.status === "FINISHED");
   const cycleStatus = dashboard?.cycle?.status ?? "ACTIVE";
 
   function countryByCode(code) {
@@ -186,10 +188,25 @@ export default function AdminPage() {
         awayScore: Number(draft.awayScore),
       });
       setMessage("Resultado actualizado.");
+      setEditingResultId(null);
       await refreshDashboard(selectedDate);
     } catch (requestError) {
       setError(requestError.message);
     }
+  }
+
+  function handleStartEditResult(match) {
+    setError("");
+    setMessage("");
+    setResultDrafts((current) => ({
+      ...current,
+      [match.id]: { homeScore: String(match.homeScore), awayScore: String(match.awayScore) },
+    }));
+    setEditingResultId(match.id);
+  }
+
+  function handleCancelEditResult() {
+    setEditingResultId(null);
   }
 
   async function handleFinalizeDay() {
@@ -426,7 +443,7 @@ export default function AdminPage() {
               <div className="section-head">
                 <div>
                   <span className="section-label">Resultados</span>
-                  <h2>Ingresar resultado final</h2>
+                  <h2>Ingresar / editar resultado final</h2>
                 </div>
                 <button type="button" className="ghost-button" onClick={handleFinalizeDay}>
                   Finalizar jornada
@@ -537,6 +554,119 @@ export default function AdminPage() {
                       : "No hay partidos creados para esta fecha."}
                   </div>
                 )}
+
+                {finishedMatches.map((match) => {
+                  const isEditing = editingResultId === match.id;
+                  const resultDraft = resultDrafts[match.id] ?? emptyResultDraft();
+
+                  return (
+                    <article className="result-card match-card" key={match.id}>
+                      <div className="match-line">
+                        <div className="match-teams">
+                          <div className="country-line">
+                            <img src={match.homeFlagUrl} alt={match.homeCountryName} />
+                            <span>{match.homeCountryName}</span>
+                          </div>
+                          <span className="versus">vs</span>
+                          <div className="country-line right">
+                            <span>{match.awayCountryName}</span>
+                            <img src={match.awayFlagUrl} alt={match.awayCountryName} />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="match-delete-btn"
+                          title="Eliminar partido"
+                          onClick={() => handleDeleteMatch(match.id, match.homeCountryName, match.awayCountryName)}
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <div className="match-meta">
+                        <span>{formatDateTime(match.scheduledAt)}</span>
+                        <strong>{scoreLabel(match.homeScore, match.awayScore)}</strong>
+                      </div>
+
+                      {isEditing ? (
+                        <div className="prediction-block admin-block">
+                          <h3>Editar marcador final</h3>
+                          <div className="score-grid compact">
+                            <label className="field-stack" htmlFor={`home-edit-${match.id}`}>
+                              <span>{match.homeCountryName}</span>
+                              <input
+                                id={`home-edit-${match.id}`}
+                                type="number"
+                                min="0"
+                                value={resultDraft.homeScore}
+                                onChange={(event) =>
+                                  setResultDrafts((current) => ({
+                                    ...current,
+                                    [match.id]: { ...resultDraft, homeScore: event.target.value },
+                                  }))
+                                }
+                                placeholder="Goles"
+                              />
+                            </label>
+                            <label className="field-stack" htmlFor={`away-edit-${match.id}`}>
+                              <span>{match.awayCountryName}</span>
+                              <input
+                                id={`away-edit-${match.id}`}
+                                type="number"
+                                min="0"
+                                value={resultDraft.awayScore}
+                                onChange={(event) =>
+                                  setResultDrafts((current) => ({
+                                    ...current,
+                                    [match.id]: { ...resultDraft, awayScore: event.target.value },
+                                  }))
+                                }
+                                placeholder="Goles"
+                              />
+                            </label>
+                          </div>
+                          <div className="inline-actions">
+                            <button type="button" className="ghost-button" onClick={() => handleUpdateResult(match.id)}>
+                              Guardar cambios
+                            </button>
+                            <button type="button" className="ghost-button" onClick={handleCancelEditResult}>
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button type="button" className="ghost-button" onClick={() => handleStartEditResult(match)}>
+                          Editar resultado
+                        </button>
+                      )}
+
+                      <div className="bets-strip">
+                        {match.bets.length ? (
+                          match.bets.map((bet) => {
+                            const isHit =
+                              bet.predictedHomeScore === match.homeScore &&
+                              bet.predictedAwayScore === match.awayScore;
+                            return (
+                              <span key={bet.id} className={`bet-chip ${isHit ? "bet-hit" : "bet-miss"}`}>
+                                {bet.userName} {bet.predictedHomeScore}-{bet.predictedAwayScore}
+                                <button
+                                  type="button"
+                                  className="bet-delete-btn"
+                                  title="Eliminar apuesta"
+                                  onClick={() => handleDeleteBet(bet.id, bet.userName)}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span className="muted">Sin apuestas todavía</span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </article>
           </div>
